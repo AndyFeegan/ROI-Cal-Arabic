@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حاسبة العائد على الاستثمار Fresha</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;direction:rtl}
+.header{padding:1.5rem;border-bottom:0.5px solid #e5e7eb;background:#f9fafb}
+.container{max-width:650px;margin:0 auto}.step{display:none;padding:2rem 1.5rem}.step.active{display:block}
+h1{font-size:24px;font-weight:500;margin:0 0 0.5rem}h2{font-size:18px;font-weight:500;margin:0 0 1.5rem}
+.subtitle{font-size:14px;color:#6b7280;margin:0 0 2rem}
+.question-group{margin:0 0 1.5rem}.question-label{font-size:14px;font-weight:500;margin:0 0 0.5rem;display:block}
+.input-row{display:flex;gap:8px;align-items:center}
+input[type=number]{flex:1;padding:10px 12px;font-size:14px;border:0.5px solid #e5e7eb;border-radius:4px}
+input[type=number]:focus{outline:0;border-color:#3b82f6}
+.unit{font-size:13px;color:#6b7280;min-width:70px}
+.auto-calc{background:#f0fdf4;border:0.5px solid #dcfce7;border-radius:6px;padding:12px;margin:8px 0;font-size:13px;color:#166534}
+.metric-card{background:#f9fafb;border-radius:8px;padding:1rem;margin:1rem 0;border-right:4px solid #06b6d4;border-left:none}
+.metric-label{font-size:12px;color:#6b7280;margin:0}.metric-value{font-size:28px;font-weight:500;color:#06b6d4;margin:0.5rem 0 0}
+.metric-range{font-size:14px;color:#111827;margin:0.5rem 0 0}
+.button-group{display:flex;gap:12px;margin:2rem 0 0}
+button{flex:1;padding:12px 16px;font-size:14px;border:0.5px solid #d1d5db;background:0;border-radius:4px;cursor:pointer;font-weight:500}
+button.primary{background:#06b6d4;color:white;border-color:#06b6d4}
+button:hover{background:#f0f0f0}
+.area-grid{display:grid;gap:12px;margin:2rem 0}.area-card{padding:1.5rem 1rem;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;text-align:center;background:white}
+.area-card:hover{background:#f9fafb;border-color:#06b6d4}.area-card h3{margin:0.5rem 0 0.3rem;font-size:16px;font-weight:600}
+.area-icon{font-size:28px;margin-bottom:0.5rem}
+.recommendation{background:#f9fafb;border-radius:8px;padding:1rem;margin:1rem 0;border-right:4px solid #06b6d4;border-left:none}
+.recommendation h3{margin:0 0 0.5rem;font-size:14px;font-weight:500}.recommendation p{margin:0;font-size:13px;color:#6b7280;line-height:1.5}
+.error-message{font-size:12px;color:#ef4444;display:none}.error-message.show{display:block}
+.divider{border-top:1px solid #e5e7eb;margin:0.75rem 0;padding-top:0.75rem}
+.disclaimer{background:#fef3c7;border:0.5px solid #fde68a;border-radius:6px;padding:12px;margin:1rem 0;font-size:12px;color:#92400e;line-height:1.6}
+.info-box{background:#dbeafe;border-right:4px solid #0284c7;border-left:none;padding:12px;margin:0 0 1.5rem;border-radius:4px}
+.info-box p{margin:0;font-size:13px;color:#0c4a6e;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="header">
+</div>
+<div class="container" id="main-container">
+<div class="step active" id="step-welcome">
+<div style="font-size:48px;margin:0 0 1rem">📊</div>
+<h1>حاسبة العائد على الاستثمار لـ Fresha</h1>
+<p class="subtitle">اكتشف قيمة ميزات Fresha الرئيسية.</p>
+<div class="area-grid" id="area-cards-container"></div>
+</div>
+<div class="step" id="step-discovery">
+<h2 id="area-title">السوق</h2>
+<div id="questions-container"></div>
+<div class="button-group">
+<button onclick="goToStep('welcome')">العودة</button>
+<button class="primary" onclick="calculate()">احسب →</button>
+</div>
+</div>
+<div class="step" id="step-results">
+<h2 id="results-title">تأثيرك السنوي</h2>
+<div id="results-container"></div>
+<div class="button-group">
+<button onclick="downloadPDF()">📥 حفظ كـ PDF</button>
+<button onclick="window.print()">🖨️ طباعة</button>
+</div>
+<div class="button-group">
+<button onclick="goToStep('discovery')">تحرير</button>
+<button class="primary" onclick="goToStep('welcome')">الرئيسية</button>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+const areas = {
+  marketplace: {
+    icon:'📱', 
+    title:'السوق', 
+    desc:'حجوزات إضافية من خلال الظهور على الإنترنت',
+    questions:[
+      {id:'staff', label:'عدد الموظفين', unit:'شخص'},
+      {id:'daily', label:'متوسط الحجوزات اليومية لكل شخص', unit:'في اليوم'},
+      {id:'value', label:'متوسط قيمة الحجز', unit:'لكل حجز'},
+      {id:'fees', label:'رسومك المحلية', unit:'%'}
+    ]
+  },
+  deposits: {
+    icon:'💰', 
+    title:'الودائع', 
+    desc:'تحسين تدفق النقد وتقليل الغيابات',
+    questions:[
+      {id:'staff', label:'عدد الموظفين', unit:'شخص'},
+      {id:'daily', label:'متوسط الحجوزات اليومية لكل شخص', unit:'في اليوم'},
+      {id:'value', label:'متوسط قيمة الحجز', unit:'لكل حجز'},
+      {id:'noshows', label:'الغيابات الحالية في اليوم', unit:'في اليوم'},
+      {id:'fees', label:'رسومك المحلية', unit:'%'}
+    ]
+  },
+  payments: {
+    icon:'💳', 
+    title:'المدفوعات', 
+    desc:'زيادة البقاشيش من خلال تنبيهات الدفع الرقمية',
+    questions:[
+      {id:'staff', label:'عدد الموظفين', unit:'شخص'},
+      {id:'daily', label:'متوسط الحجوزات اليومية لكل شخص', unit:'في اليوم'},
+      {id:'value', label:'متوسط قيمة الحجز', unit:'لكل حجز'},
+      {id:'tip-percent', label:'% من العملاء الذين يعطون بقشيش', unit:'%'},
+      {id:'tip-rate', label:'متوسط البقشيش %', unit:'%'},
+      {id:'fees', label:'رسومك المحلية', unit:'%'}
+    ]
+  }
+};
+
+let currentArea = null;
+
+function selectArea(area) {
+  currentArea = area;
+  document.getElementById('area-title').textContent = areas[area].title;
+  renderQuestions();
+  goToStep('discovery');
+}
+
+function renderQuestions() {
+  const container = document.getElementById('questions-container');
+  const config = areas[currentArea];
+  
+  container.innerHTML = config.questions.map((q, i) => {
+    let html = `<div class="question-group">
+      <label class="question-label">${q.label}</label>
+      <div class="input-row">
+        <input type="number" id="q${i}" min="0" placeholder="0" onchange="updateCalcs()">
+        <span class="unit">${q.unit}</span>
+      </div>`;
+    
+    if (currentArea === 'marketplace' && i === 2) {
+      html += `<div class="auto-calc">
+        أسبوعي: <strong id="weekly">0</strong> | شهري: <strong id="monthly">0</strong> | سنوي: <strong id="annual">0</strong>
+      </div>`;
+    }
+    
+    if (currentArea === 'deposits' && i === 2) {
+      html += `<div class="auto-calc"><strong>الحجوزات:</strong> أسبوعي: <strong id="dep-weekly">0</strong> | شهري: <strong id="dep-monthly">0</strong> | سنوي: <strong id="dep-annual">0</strong></div>`;
+    }
+    
+    if (currentArea === 'deposits' && i === 3) {
+      html += `<div class="auto-calc"><strong>الغيابات:</strong> أسبوعي: <strong id="nshow-weekly">0</strong> | شهري: <strong id="nshow-monthly">0</strong> | سنوي: <strong id="nshow-annual">0</strong> | الإيرادات المفقودة: <strong id="lost-revenue">0</strong></div>`;
+    }
+    
+    if (currentArea === 'payments' && i === 2) {
+      html += `<div class="auto-calc"><strong>الحجوزات:</strong> أسبوعي: <strong id="pay-weekly">0</strong> | شهري: <strong id="pay-monthly">0</strong> | سنوي: <strong id="pay-annual">0</strong></div>`;
+    }
+    
+    if (currentArea === 'payments' && i === 4) {
+      html += `<div class="auto-calc"><strong>البقاشيش الحالية:</strong> شهري: <strong id="tips-monthly">0</strong> | سنوي: <strong id="tips-annual">0</strong></div>`;
+    }
+    
+    html += `</div>`;
+    return html;
+  }).join('');
+}
+
+function updateCalcs() {
+  if (currentArea === 'marketplace') {
+    const staff = parseFloat(document.getElementById('q0')?.value) || 0;
+    const daily = parseFloat(document.getElementById('q1')?.value) || 0;
+    const w = Math.round(staff * daily * 5);
+    const m = Math.round(w * 4.3);
+    const a = Math.round(m * 12);
+    if (document.getElementById('weekly')) document.getElementById('weekly').textContent = w.toLocaleString('ar-SA');
+    if (document.getElementById('monthly')) document.getElementById('monthly').textContent = m.toLocaleString('ar-SA');
+    if (document.getElementById('annual')) document.getElementById('annual').textContent = a.toLocaleString('ar-SA');
+  } else if (currentArea === 'deposits') {
+    const staff = parseFloat(document.getElementById('q0')?.value) || 0;
+    const daily = parseFloat(document.getElementById('q1')?.value) || 0;
+    const bv = parseFloat(document.getElementById('q2')?.value) || 0;
+    const ns = parseFloat(document.getElementById('q3')?.value) || 0;
+    const w = Math.round(staff * daily * 5);
+    const m = Math.round(w * 4.3);
+    const a = Math.round(m * 12);
+    const nsw = Math.round(ns * 5);
+    const nsm = Math.round(nsw * 4.3);
+    const nsa = Math.round(nsm * 12);
+    const lr = nsa * bv;
+    if (document.getElementById('dep-weekly')) document.getElementById('dep-weekly').textContent = w.toLocaleString('ar-SA');
+    if (document.getElementById('dep-monthly')) document.getElementById('dep-monthly').textContent = m.toLocaleString('ar-SA');
+    if (document.getElementById('dep-annual')) document.getElementById('dep-annual').textContent = a.toLocaleString('ar-SA');
+    if (document.getElementById('nshow-weekly')) document.getElementById('nshow-weekly').textContent = nsw.toLocaleString('ar-SA');
+    if (document.getElementById('nshow-monthly')) document.getElementById('nshow-monthly').textContent = nsm.toLocaleString('ar-SA');
+    if (document.getElementById('nshow-annual')) document.getElementById('nshow-annual').textContent = nsa.toLocaleString('ar-SA');
+    if (document.getElementById('lost-revenue')) document.getElementById('lost-revenue').textContent = lr.toLocaleString('ar-SA');
+  } else if (currentArea === 'payments') {
+    const staff = parseFloat(document.getElementById('q0')?.value) || 0;
+    const daily = parseFloat(document.getElementById('q1')?.value) || 0;
+    const tp = parseFloat(document.getElementById('q3')?.value) || 0;
+    const tr = parseFloat(document.getElementById('q4')?.value) || 0;
+    const w = Math.round(staff * daily * 5);
+    const m = Math.round(w * 4.3);
+    const a = Math.round(m * 12);
+    const ct = m * tp / 100;
+    const tm = Math.round(ct * tr / 100);
+    const ta = Math.round(tm * 12);
+    if (document.getElementById('pay-weekly')) document.getElementById('pay-weekly').textContent = w.toLocaleString('ar-SA');
+    if (document.getElementById('pay-monthly')) document.getElementById('pay-monthly').textContent = m.toLocaleString('ar-SA');
+    if (document.getElementById('pay-annual')) document.getElementById('pay-annual').textContent = a.toLocaleString('ar-SA');
+    if (document.getElementById('tips-monthly')) document.getElementById('tips-monthly').textContent = tm.toLocaleString('ar-SA');
+    if (document.getElementById('tips-annual')) document.getElementById('tips-annual').textContent = ta.toLocaleString('ar-SA');
+  }
+}
+
+function calculate() {
+  const container = document.getElementById('results-container');
+  const values = {};
+  const config = areas[currentArea];
+  config.questions.forEach((q, i) => {
+    values[q.id] = parseFloat(document.getElementById(`q${i}`)?.value) || 0;
+  });
+  let html = '';
+
+  if (currentArea === 'marketplace') {
+    const staff = values['staff'];
+    const daily = values['daily'];
+    const bookVal = values['value'];
+    const fees = values['fees'];
+    
+    const weekly = Math.round(staff * daily * 5);
+    const monthly = Math.round(weekly * 4.3);
+    const annual = Math.round(monthly * 12);
+    
+    const lowGrowth = Math.round(annual * 0.10);
+    const midGrowth = Math.round(annual * 0.18);
+    const highGrowth = Math.round(annual * 0.30);
+    
+    const lowRev = lowGrowth * bookVal;
+    const lowFees = Math.round(lowRev * fees / 100);
+    const lowNet = lowRev - lowFees;
+    
+    const midRev = midGrowth * bookVal;
+    const midFees = Math.round(midRev * fees / 100);
+    const midNet = midRev - midFees;
+    
+    const highRev = highGrowth * bookVal;
+    const highFees = Math.round(highRev * fees / 100);
+    const highNet = highRev - highFees;
+    
+    html = `
+      <div class="disclaimer">
+        <strong>⚠️ تقديرات توضيحية:</strong> ترتبط رؤية السوق مباشرة بحجم الحجوزات. الشركاء الذين يكملون 100% من حقول ملفهم الشخصي (الخدمات والتسعير والساعات والسياسات) يرون معدلات حجز أعلى بـ 25-40% من الملفات الشخصية غير المكتملة. تقييمات العملاء هي أقوى محرك للحجز - كل تقييم 5 نجوم يزيد تحويل الحجز بـ 8-12%. الصور الاحترافية (5+ صور خدمات) تزيد الاستفسارات بـ 30-50%. أوقات الرد السريعة مهمة: الرد في غضون ساعة واحدة يزيد من تكمال الحجز بـ 35% مقابل الردود في 24 ساعة.
+      </div>
+      
+      <div class="info-box">
+        <p><strong>وضعك الحالي:</strong> ~${monthly.toLocaleString('ar-SA')} حجز/شهر (${annual.toLocaleString('ar-SA')}/سنة)</p>
+      </div>
+      
+      <p style="font-size:13px;color:#6b7280;margin:1rem 0;font-weight:500">تقديرات نمو السوق Fresha:</p>
+      
+      <div class="metric-card">
+        <p class="metric-label">محافظ (نمو 10%)</p>
+        <p class="metric-value">+${lowGrowth.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الإيرادات السنوية: ${lowRev.toLocaleString('ar-SA')} | الرسوم: -${lowFees.toLocaleString('ar-SA')} | <strong>الصافي: ${lowNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">متوسط (نمو 18%)</p>
+        <p class="metric-value">+${midGrowth.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الإيرادات السنوية: ${midRev.toLocaleString('ar-SA')} | الرسوم: -${midFees.toLocaleString('ar-SA')} | <strong>الصافي: ${midNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">عدواني (نمو 30%)</p>
+        <p class="metric-value">+${highGrowth.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الإيرادات السنوية: ${highRev.toLocaleString('ar-SA')} | الرسوم: -${highFees.toLocaleString('ar-SA')} | <strong>الصافي: ${highNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="recommendation">
+        <h3>📱 استراتيجية نمو السوق</h3>
+        <p>الرؤية في السوق ترتبط مباشرة بحجم الحجوزات. الشركاء الذين يكملون ملفهم الشخصي بالكامل يرون معدلات حجز أعلى بكثير. تقييمات العملاء والصور الاحترافية وأوقات الرد السريعة هي المحركات الرئيسية للنمو. التقديرات المحافظة تفترض تحسينًا تدريجيًا؛ التقديرات المتوسطة تفترض جهدًا مركزًا على أفضل 3 عوامل؛ التقديرات العدوانية تفترض استراتيجية شاملة عبر جميع المحركات. يجب مراعاة العوامل الموسمية والمنافسة المحلية عند توقع النمو.</p>
+      </div>
+    `;
+  } 
+  else if (currentArea === 'deposits') {
+    const staff = values['staff'];
+    const daily = values['daily'];
+    const bookVal = values['value'];
+    const noshows = values['noshows'];
+    const fees = values['fees'];
+    
+    const weekly = Math.round(staff * daily * 5);
+    const monthly = Math.round(weekly * 4.3);
+    const annual = Math.round(monthly * 12);
+    
+    const nshowWeekly = Math.round(noshows * 5);
+    const nshowMonthly = Math.round(nshowWeekly * 4.3);
+    const nshowAnnual = Math.round(nshowMonthly * 12);
+    const lostRev = nshowAnnual * bookVal;
+    
+    const conserveRed = Math.round(nshowAnnual * 0.60);
+    const midRed = Math.round(nshowAnnual * 0.70);
+    const aggRed = Math.round(nshowAnnual * 0.80);
+    
+    const depVal = bookVal * 0.5;
+    
+    const conserveRev = conserveRed * depVal;
+    const conserveFees = Math.round(conserveRev * fees / 100);
+    const conserveNet = conserveRev - conserveFees;
+    
+    const midRev = midRed * depVal;
+    const midFees = Math.round(midRev * fees / 100);
+    const midNet = midRev - midFees;
+    
+    const aggRev = aggRed * depVal;
+    const aggFees = Math.round(aggRev * fees / 100);
+    const aggNet = aggRev - aggFees;
+    
+    html = `
+      <div class="disclaimer">
+        <strong>⚠️ تقديرات توضيحية:</strong> تقديرات تقليل الغيابات تعتمد على تأثير تنفيذ الودائع عبر قطاعات الصالونات والسبا والعافية. الأنماط النموذجية تظهر أن الودائع تقلل الغيابات بمعدل 50-75% عند وضعها كـ "تأمين حجز" وليس كإجراء عقابي. التقديرات المحافظة (تقليل 60%) تفترض تنفيذ ودائع أساسي برسائل قياسية. التقديرات المتوسطة (تقليل 70%) تفترض اتصالات واضحة حول سياسة الودائع وشروط الاسترجاع. التقديرات العدوانية (تقليل 80%) تفترض سير عمل تأكيد مدمج وتذكيرات تلقائية.
+      </div>
+      
+      <div class="info-box" style="background:#fee2e2;border-right-color:#dc2626">
+        <p style="color:#7f1d1d"><strong>التأثير الحالي للغيابات:</strong> ~${nshowMonthly.toLocaleString('ar-SA')} غيابات/شهر (${nshowAnnual.toLocaleString('ar-SA')}/سنة) = <strong>${lostRev.toLocaleString('ar-SA')} إيرادات مفقودة سنويًا</strong></p>
+      </div>
+      
+      <p style="font-size:13px;color:#6b7280;margin:1rem 0;font-weight:500">استرجاع الإيرادات مع الودائع:</p>
+      
+      <div class="metric-card">
+        <p class="metric-label">محافظ (تقليل الغيابات 60%)</p>
+        <p class="metric-value">+${conserveRed.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الودائع المجمعة: ${Math.round(conserveRev).toLocaleString('ar-SA')} | الرسوم: -${conserveFees.toLocaleString('ar-SA')} | <strong>الصافي: ${Math.round(conserveNet).toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">متوسط (تقليل الغيابات 70%)</p>
+        <p class="metric-value">+${midRed.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الودائع المجمعة: ${Math.round(midRev).toLocaleString('ar-SA')} | الرسوم: -${midFees.toLocaleString('ar-SA')} | <strong>الصافي: ${Math.round(midNet).toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">عدواني (تقليل الغيابات 80%)</p>
+        <p class="metric-value">+${aggRed.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">الودائع المجمعة: ${Math.round(aggRev).toLocaleString('ar-SA')} | الرسوم: -${aggFees.toLocaleString('ar-SA')} | <strong>الصافي: ${Math.round(aggNet).toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="recommendation">
+        <h3>💰 الودائع وتدفق النقد</h3>
+        <p>الودائع الآلية تحول تدفق النقد لديك من خلال جمع الدفع مقدمًا، مما يقلل من متابعة الحجوزات غير المدفوعة. بالإضافة إلى استرجاع الإيرادات، تشير الودائع إلى التزام العميل، مما يقلل من الإلغاءات في اللحظة الأخيرة. معظم الشركاء يرون تقليل الغيابات في غضون الشهر الأول من التنفيذ. أفضل الممارسات: ضع الودائع كـ "تأكيد حجز" وليس كرسوم إلغاء. وضوح سياسة الاسترجاع حاسم - السياسات الشفافة في الواقع تزيد الحجوزات بـ 20-30% مقابل تلك التي تحتوي على شروط غامضة.</p>
+      </div>
+    `;
+  }
+  else if (currentArea === 'payments') {
+    const staff = values['staff'];
+    const daily = values['daily'];
+    const bookVal = values['value'];
+    const tipPercent = values['tip-percent'];
+    const tipRate = values['tip-rate'];
+    const fees = values['fees'];
+    
+    const monthly = Math.round(staff * daily * 4.3 * 5);
+    const annual = Math.round(monthly * 12);
+    
+    const clientsTip = monthly * tipPercent / 100;
+    const tipValue = bookVal * tipRate / 100;
+    const currentTipMonthly = Math.round(clientsTip * tipValue);
+    const currentTipAnnual = Math.round(currentTipMonthly * 12);
+    
+    const conserveUpLift = Math.round(currentTipAnnual * 0.40);
+    const midUpLift = Math.round(currentTipAnnual * 0.50);
+    const aggUpLift = Math.round(currentTipAnnual * 0.60);
+    
+    const conserveFees = Math.round(conserveUpLift * fees / 100);
+    const conserveNet = conserveUpLift - conserveFees;
+    
+    const midFees = Math.round(midUpLift * fees / 100);
+    const midNet = midUpLift - midFees;
+    
+    const aggFees = Math.round(aggUpLift * fees / 100);
+    const aggNet = aggUpLift - aggFees;
+    
+    html = `
+      <div class="disclaimer">
+        <strong>⚠️ تقديرات توضيحية:</strong> معايير رفع البقاشيش من حلول الدفع الرقمية عبر صناعات الخدمات. يظهر البحث أن تنبيهات الدفع الرقمي تزيد معدلات البقشيش بـ 35-65% اعتمادًا على التنفيذ. التقديرات المحافظة (رفع 40%) تفترض خيار دفع رقمي أساسي بدون تنبيهات الدفع. التقديرات المتوسطة (رفع 50%) تفترض تنبيه دفع بارز في الدفع (تُعرض اقتراحات قائمة على النسبة المئوية). التقديرات العدوانية (رفع 60%) تفترض تنبيهات محسّنة مع مبالغ بقشيش متعددة وانخراط المتابعة.
+      </div>
+      
+      <div class="info-box">
+        <p><strong>خط الأساس الحالي للبقاشيش:</strong> ~${currentTipMonthly.toLocaleString('ar-SA')}/شهر (${currentTipAnnual.toLocaleString('ar-SA')}/سنة)</p>
+      </div>
+      
+      <p style="font-size:13px;color:#6b7280;margin:1rem 0;font-weight:500">بقاشيش إضافية مع الدفع الرقمي:</p>
+      
+      <div class="metric-card">
+        <p class="metric-label">محافظ (رفع 40%)</p>
+        <p class="metric-value">+${conserveUpLift.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">البقاشيش السنوية: ${conserveUpLift.toLocaleString('ar-SA')} | الرسوم: -${conserveFees.toLocaleString('ar-SA')} | <strong>الصافي: ${conserveNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">متوسط (رفع 50%)</p>
+        <p class="metric-value">+${midUpLift.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">البقاشيش السنوية: ${midUpLift.toLocaleString('ar-SA')} | الرسوم: -${midFees.toLocaleString('ar-SA')} | <strong>الصافي: ${midNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="metric-card">
+        <p class="metric-label">عدواني (رفع 60%)</p>
+        <p class="metric-value">+${aggUpLift.toLocaleString('ar-SA')}</p>
+        <p class="metric-range">البقاشيش السنوية: ${aggUpLift.toLocaleString('ar-SA')} | الرسوم: -${aggFees.toLocaleString('ar-SA')} | <strong>الصافي: ${aggNet.toLocaleString('ar-SA')}</strong></p>
+      </div>
+      
+      <div class="recommendation">
+        <h3>💳 معالجة الدفع والبقاشيش</h3>
+        <p>تنبيهات الدفع الرقمية عند الدفع تزيد معدلات البقشيش بـ 40-60%. يظهر البحث أن اقتراح مبالغ البقشيش (15%، 18%، 20%) يزيد من الاعتماد 2-3 مرات مقابل طلبات البقشيش المفتوحة. أصبحت المدفوعات غير التلامسية قد طبّعت البقاشيش في صناعات الخدمات - 65% من العملاء يتوقعون الآن خيارات البقشيش. بعد 3 أشهر من أحجام المعالجة المتسقة، قد تكون مؤهلاً لخيارات القروض التجارية Fresha - التوفر يعتمد على الموقع. الفوائد الإضافية: تقلل تكاليف التعامل بالنقود، وتحسن التتبع المالي لأغراض الضرائب، وتسرع من تسوية الدفع. تدريب الموظفين على تعزيز الدفع الرقمي هو المفتاح لتحقيق الرفع الكامل.</p>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+  document.getElementById('results-title').textContent = areas[currentArea].title + ' - التأثير السنوي';
+  goToStep('results');
+}
+
+function goToStep(step) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + step).classList.add('active');
+}
+
+function downloadPDF() {
+  const element = document.getElementById('step-results');
+  const resultsTitle = document.getElementById('results-title').textContent;
+  
+  const opt = {
+    margin: 10,
+    filename: `fresha-roi-${currentArea}-results-ar.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+  };
+  
+  html2pdf().set(opt).from(element).save();
+}
+
+// Initialize
+const cardContainer = document.getElementById('area-cards-container');
+Object.keys(areas).forEach(area => {
+  const card = document.createElement('div');
+  card.className = 'area-card';
+  card.onclick = () => selectArea(area);
+  card.innerHTML = `<div class="area-icon">${areas[area].icon}</div><h3>${areas[area].title}</h3><p>${areas[area].desc}</p>`;
+  cardContainer.appendChild(card);
+});
+</script>
+</body>
+</html>
